@@ -2,8 +2,8 @@
 # Guidelines projet chrono 24
 ## Comment Setup le projet ? 
 ### Pré-requis : 
- - Avoir git d'installer (optionnel)
- - Avoir Python d'installer (setup en variable d'environement)
+ - Avoir git installé (optionnel)
+ - Avoir Python installé (setup en variable d'environement)
 ### Etapes : 
 - Avec GIT :
     - Ouvrir le terminal dans n'importe quel dossier
