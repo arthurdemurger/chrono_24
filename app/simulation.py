@@ -5,7 +5,7 @@ import json
 class SimulationManager:
     def __init__(self, app):
         self.app = app
-        self.simulation_running = False
+        self.simulation_running = False  # Indicateur de l'état de la simulation
         self.start_time = None
         self.duration_seconds = 240.0  # 4 min par défaut
 
@@ -21,6 +21,10 @@ class SimulationManager:
         Lance la simulation même si elle a déjà été fermée auparavant.
         `duration` est en secondes (float). S'il est None, on garde 240.0.
         """
+        if self.simulation_running:
+            print("Une simulation est déjà en cours.")
+            return  # Si la simulation est déjà en cours, on ne fait rien
+
         if duration is not None:
             self.duration_seconds = duration
         if not self.coordinates:
@@ -56,14 +60,6 @@ class SimulationManager:
 
         self.update_simulation()
 
-    def on_close_window(self):
-        """
-        Appelé quand on ferme la fenêtre simulation. On repasse la variable
-        simulation_running à False pour autoriser un nouveau lancement.
-        """
-        self.simulation_running = False
-        self.win.destroy()
-
     def update_simulation(self):
         if not self.simulation_running or not self.coordinates:
             return
@@ -83,3 +79,13 @@ class SimulationManager:
         else:
             # Fin de la simulation
             self.simulation_running = False
+            self.app.simulation_active = False  # Mise à jour de l'état dans l'application
+
+    def on_close_window(self):
+        """
+        Appelé quand on ferme la fenêtre simulation. On repasse la variable
+        simulation_running à False pour autoriser un nouveau lancement.
+        """
+        self.simulation_running = False
+        self.app.simulation_active = False  # Mise à jour de l'état dans l'application
+        self.win.destroy()
