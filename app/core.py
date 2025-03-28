@@ -44,6 +44,9 @@ class CyclingCore:
             "Alaskan", "Chikaree", "Margay", "Mink", "Springbok"
         ]
 
+        self.next_rouleurs_queue = []
+        self.current_rouleur = self.riders[0]
+
         init_db()
         # Lancement du timer => depuis ui.py (self.core.update_timer()) après build_ui
 
@@ -114,22 +117,96 @@ class CyclingCore:
         self.app.label_tma_total.config(text=f"Total TMA: {self.total_tma}")
         self.update_lap_history()
 
+
     # ============== Record Vélo 1 ==============
+    def update_queue_display(self):
+      for item in self.app.queue_tree.get_children():
+          self.app.queue_tree.delete(item)
+      for rider in self.next_rouleurs_queue:
+          self.app.queue_tree.insert("", "end", values=(rider,))
+
+
+    def update_current_rouleur_display(self):
+      # Mettre à jour l'étiquette du rouleur actuel dans l'interface
+      self.app.current_rider_label.config(text=f"Rouleur actuel : {self.current_rouleur}")
+
+    def next_rouleur(self):
+        if self.next_rouleurs_queue:
+            self.current_rouleur = self.next_rouleurs_queue.pop(0)  # Passe au premier rouleur de la queue
+            self.update_queue_display()  # Mettre à jour le tableau après changement
+            self.update_current_rouleur_display()  # Mettre à jour l'affichage du rouleur actuel
+        else:
+            messagebox.showwarning("File vide", "La file d'attente est vide.")
+
+    def add_to_queue(self):
+        rider = self.app.rider_selector.get()  # Obtenir le nom du rouleur sélectionné
+        self.next_rouleurs_queue.append(rider)  # Ajouter à la queue si non déjà présent
+        self.update_queue_display()  # Mettre à jour l'affichage de la file d'attente
+
+    def remove_from_queue(self):
+        selected = self.app.queue_tree.selection()
+        if not selected:
+            messagebox.showinfo("Info", "Veuillez sélectionner un rouleur à retirer dans la liste.")
+            return
+
+        index = self.app.queue_tree.index(selected[0])  # <- On récupère l'index directement
+        if 0 <= index < len(self.next_rouleurs_queue):
+            del self.next_rouleurs_queue[index]  # <- Suppression par index
+            self.update_queue_display()
+
+    def move_rider_up(self):
+        selected = self.app.queue_tree.selection()
+        if selected:
+            index = self.app.queue_tree.index(selected[0])
+            if index > 0:
+                # Échange dans la liste
+                self.next_rouleurs_queue[index], self.next_rouleurs_queue[index - 1] = self.next_rouleurs_queue[index - 1], self.next_rouleurs_queue[index]
+                self.update_queue_display()
+                # Re-sélectionner l'élément déplacé
+                new_item = self.app.queue_tree.get_children()[index - 1]
+                self.app.queue_tree.selection_set(new_item)
+
+    def move_rider_down(self):
+        selected = self.app.queue_tree.selection()
+        if selected:
+            index = self.app.queue_tree.index(selected[0])
+            if index < len(self.next_rouleurs_queue) - 1:
+                # Échange dans la liste
+                self.next_rouleurs_queue[index], self.next_rouleurs_queue[index + 1] = self.next_rouleurs_queue[index + 1], self.next_rouleurs_queue[index]
+                self.update_queue_display()
+                # Re-sélectionner l'élément déplacé
+                new_item = self.app.queue_tree.get_children()[index + 1]
+                self.app.queue_tree.selection_set(new_item)
+
+    def reset_queue(self):
+        self.next_rouleurs_queue = []
+        self.app.queue_tree.delete(*self.app.queue_tree.get_children())
+
+    def confirm_reset_queue(self):
+        confirm = messagebox.askyesno("Confirmation", "Es-tu sûr de vouloir réinitialiser toute la file d'attente ?")
+        if confirm:
+          self.reset_queue()
+
     def record_rouleur_1(self):
         if not self.start_time:
             messagebox.showwarning("Attention", "Démarrez d'abord le chronomètre.")
             return
         now = time.time()
+
+        # Vérification du temps entre deux tours
         if self.last_rouleur_1_time and (now - self.last_rouleur_1_time < self.MIN_LAP_TIME):
             messagebox.showwarning("Attention", f"Il faut au moins {self.MIN_LAP_TIME}s entre deux tours Vélo 1.")
             return
 
-        rider = self.app.rider_selector.get() or "Vélo1"
+        rider = self.current_rouleur or "Vélo1"  # Si la queue est vide, utiliser l'ancien ou "Vélo1"
+
         self.total_rouleur_1 += 1
 
+        # Calcul du temps du tour
         lap_duration = (now - self.last_rouleur_1_time) if self.last_rouleur_1_time else (now - self.start_time)
         lap_time_str = self.format_time(now)
 
+        # Enregistrer le tour dans la base de données
         store_lap_data(
             lap_type="Vélo 1",
             lap_number=self.total_rouleur_1,
@@ -139,11 +216,21 @@ class CyclingCore:
             cumulative_time=int(now - self.start_time),
             lap_duration=int(lap_duration)
         )
+
+        # Ajouter le tour à la liste des tours de Vélo 1
         self.rouleur_1_laps.append((self.total_rouleur_1, rider, lap_time_str, "N/A", format_lap_duration(lap_duration)))
         self.last_rouleur_1_time = now
 
+        # Mise à jour de l'affichage du total des tours de Vélo 1
         self.app.label_rouleur_1_total.config(text=f"Total Rosaire (Bike 1): {self.total_rouleur_1}")
+
+        # Mettre à jour l'historique des tours
         self.update_lap_history()
+
+        # Mettre à jour l'affichage de la file d'attente des rouleurs
+        self.update_queue_display()  # Assurez-vous que cette méthode est définie dans core.py
+
+
 
     # ============== Record Peloton ==============
     def record_peloton(self):
