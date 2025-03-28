@@ -165,6 +165,9 @@ class CyclingEventApp:
         reset_btn = ttk.Button(btn_frame, text="🔁 Reset", command=self.core.confirm_reset_queue)
         reset_btn.grid(row=4, column=0, padx=5, pady=2, sticky="ew")
 
+        new_rider_button = ttk.Button(btn_frame, text="➕ Nouveau rouleur", command=self.core.add_new_rider)
+        new_rider_button.grid(row=5, column=0, columnspan=2, pady=5, sticky="w")
+
         # ===============================
         # Section 4 : Affichage de l'Écart (Gap)
         # ===============================
